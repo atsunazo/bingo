@@ -610,6 +610,7 @@ useEffect(() => {
               className="progress-modal"
               role="dialog"
             >
+              <br></br>
               <h2>クリア状況</h2>
               <p>進行状況を選んでください。</p>
 
@@ -619,7 +620,7 @@ useEffect(() => {
                 }
               >
                 現在のステップをクリアした（
-                {room.emergencySettings.revealPerStepClear}ミッション追加）
+                {room.emergencySettings.revealPerStepClear}追加）
               </button>
 
               <button onClick={() => revealEmergency(99)}>
