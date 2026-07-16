@@ -13,6 +13,7 @@ import {
   getCompletedBingoLines,
   getMaximumScore,
   getScore,
+  type BingoCell,
   type BingoRoom,
   type GameStatus,
 } from "@/lib/bingo";
@@ -37,6 +38,30 @@ function formatRemainingTime(milliseconds: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function getMissionTypeLabel(type: BingoCell["type"]) {
+  if (type === "normal") {
+    return "通常";
+  }
+
+  if (type === "center") {
+    return "中央";
+  }
+
+  return "緊急";
+}
+
+function getMissionTypeClass(type: BingoCell["type"]) {
+  if (type === "normal") {
+    return "normal";
+  }
+
+  if (type === "center") {
+    return "center";
+  }
+
+  return "emergency";
+}
+
 export default function AdminRoomPage() {
   const params = useParams<{ roomId: string }>();
   const roomId = params.roomId;
@@ -46,6 +71,9 @@ export default function AdminRoomPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [showProgressMenu, setShowProgressMenu] = useState(false);
+  const [showMissionManager, setShowMissionManager] = useState(false);
+  const [editingCellId, setEditingCellId] = useState<number | null>(null);
+  const [draftContent, setDraftContent] = useState("");
   const [now, setNow] = useState(Date.now());
 
   const roomReference = useMemo(
@@ -117,6 +145,8 @@ export default function AdminRoomPage() {
 
         transaction.set(roomReference, action(latestSnapshot.data()));
       });
+
+      return true;
     } catch (error) {
       const message =
         error instanceof Error
@@ -124,6 +154,7 @@ export default function AdminRoomPage() {
           : "更新に失敗しました。もう一度試してください。";
 
       setNotice(message);
+      return false;
     }
   }
 
@@ -132,7 +163,9 @@ export default function AdminRoomPage() {
       await navigator.clipboard.writeText(participantUrl);
       setNotice("参加者用URLをコピーしました。LINEなどへ貼り付けて共有してください。");
     } catch {
-      setNotice("コピーに失敗しました。URLを長押しまたは選択してコピーしてください。");
+      setNotice(
+        "コピーに失敗しました。表示されているURLを選択してコピーしてください。",
+      );
     }
   }
 
@@ -143,7 +176,7 @@ export default function AdminRoomPage() {
       return;
     }
 
-    await updateRoom((latestRoom) => {
+    const updated = await updateRoom((latestRoom) => {
       if (latestRoom.status !== "waiting") {
         return latestRoom;
       }
@@ -155,16 +188,18 @@ export default function AdminRoomPage() {
       };
     });
 
-    setNotice("ゲームを開始しました。中央ミッションは30秒後に発表されます。");
+    if (updated) {
+      setNotice("ゲームを開始しました。中央ミッションは30秒後に発表されます。");
+    }
   }
 
   async function revealEmergency(count: number) {
-    await updateRoom((latestRoom) => {
+    let revealedCount = 0;
+
+    const updated = await updateRoom((latestRoom) => {
       if (latestRoom.status !== "playing") {
         return latestRoom;
       }
-
-      let revealedCount = 0;
 
       const cells = latestRoom.cells.map((cell) => {
         if (
@@ -191,10 +226,14 @@ export default function AdminRoomPage() {
 
     setShowProgressMenu(false);
 
+    if (!updated) {
+      return;
+    }
+
     setNotice(
       count >= 99
         ? "ラストステップ：残りの緊急ミッションをすべて発表しました。"
-        : "緊急ミッションを1件発表しました。",
+        : `緊急ミッションを${revealedCount}件発表しました。`,
     );
   }
 
@@ -207,14 +246,70 @@ export default function AdminRoomPage() {
       return;
     }
 
-    await updateRoom((latestRoom) => ({
+    const updated = await updateRoom((latestRoom) => ({
       ...latestRoom,
       status: "finished" as GameStatus,
       finishedAt: Date.now(),
     }));
 
     setShowProgressMenu(false);
-    setNotice("ゲームを終了しました。最終結果は参加者画面にも保存されています。");
+
+    if (updated) {
+      setNotice(
+        "ゲームを終了しました。最終結果は参加者画面にも保存されています。",
+      );
+    }
+  }
+
+  function startEditingMission(cell: BingoCell) {
+    setEditingCellId(cell.id);
+    setDraftContent(cell.content);
+  }
+
+  function cancelEditingMission() {
+    setEditingCellId(null);
+    setDraftContent("");
+  }
+
+  async function saveMissionContent(cell: BingoCell) {
+    const nextContent = draftContent.trim();
+
+    if (!nextContent) {
+      setNotice("ミッション内容を入力してください。");
+      return;
+    }
+
+    if (nextContent === cell.content) {
+      cancelEditingMission();
+      return;
+    }
+
+    const accepted = window.confirm(
+      `次の内容に変更しますか？\n\n${nextContent}`,
+    );
+
+    if (!accepted) {
+      return;
+    }
+
+    const updated = await updateRoom((latestRoom) => ({
+      ...latestRoom,
+      cells: latestRoom.cells.map((latestCell) =>
+        latestCell.id === cell.id
+          ? {
+              ...latestCell,
+              content: nextContent,
+            }
+          : latestCell,
+      ),
+      centerMission:
+        cell.type === "center" ? nextContent : latestRoom.centerMission,
+    }));
+
+    if (updated) {
+      setNotice(`マス ${cell.id + 1} のミッション内容を変更しました。`);
+      cancelEditingMission();
+    }
   }
 
   if (loading) {
@@ -236,17 +331,24 @@ export default function AdminRoomPage() {
 
   const bingoLines = getCompletedBingoLines(room.cells);
   const score = getScore(room.cells);
+
   const remainingMilliseconds =
     room.status === "playing" && room.startedAt
       ? room.startedAt + room.timeLimitMinutes * 60 * 1000 - now
       : 0;
+
+  const revealedEmergencyCount = room.cells.filter(
+    (cell) => cell.type === "emergency" && cell.revealed,
+  ).length;
+
+  const completedCount = room.cells.filter((cell) => cell.completed).length;
 
   return (
     <main className="app-shell">
       <section className="game-card admin-card">
         <header className="game-header">
           <div>
-            <p className="eyebrow">運営者専用</p>
+            <p className="eyebrow">運営者用・管理画面</p>
             <h1>TOUR BINGO 管理</h1>
           </div>
 
@@ -260,6 +362,7 @@ export default function AdminRoomPage() {
 
         <section className="admin-share-box">
           <p className="admin-section-label">参加者へ送るURL</p>
+
           <p className="participant-url">{participantUrl}</p>
 
           <button className="copy-button" onClick={copyParticipantUrl}>
@@ -267,7 +370,7 @@ export default function AdminRoomPage() {
           </button>
 
           <p className="admin-share-help">
-            このURLだけを参加者へ共有してください。現在開いている管理URLは共有しません。
+            このURLだけをチームへ共有してください。管理画面のURLは共有不要です。
           </p>
         </section>
 
@@ -307,19 +410,10 @@ export default function AdminRoomPage() {
             <strong>{room.title}</strong>
           </p>
           <p>
-            {room.gridSize}×{room.gridSize}／達成マス：
-            {room.cells.filter((cell) => cell.completed).length} /
+            {room.gridSize}×{room.gridSize}／達成マス：{completedCount} /
             {room.gridSize * room.gridSize}
           </p>
-          <p>
-            緊急ミッション発表済み：
-            {
-              room.cells.filter(
-                (cell) => cell.type === "emergency" && cell.revealed,
-              ).length
-            }
-            件
-          </p>
+          <p>緊急ミッション発表済み：{revealedEmergencyCount}件</p>
         </section>
 
         {room.status === "waiting" ? (
@@ -339,9 +433,117 @@ export default function AdminRoomPage() {
           </button>
         )}
 
-        <a className="participant-preview-link" href={participantUrl}>
+        <a
+          className="participant-preview-link"
+          href={participantUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
           参加者画面を別タブで確認する →
         </a>
+
+        <section className="mission-manager">
+          <button
+            aria-expanded={showMissionManager}
+            className="mission-manager-toggle"
+            onClick={() => setShowMissionManager(!showMissionManager)}
+          >
+            <span>ミッション管理</span>
+            <span>{showMissionManager ? "閉じる ▲" : "一覧を開く ▼"}</span>
+          </button>
+
+          {showMissionManager && (
+            <div className="mission-manager-content">
+              <p className="mission-manager-help">
+                内容を変更して保存すると、参加者画面にもリアルタイムで反映されます。
+                達成状況と発表状況は変更されません。
+              </p>
+
+              <div className="mission-list">
+                {room.cells.map((cell) => {
+                  const isEditing = editingCellId === cell.id;
+
+                  return (
+                    <article
+                      className={`mission-admin-item ${
+                        cell.completed ? "is-completed" : ""
+                      }`}
+                      key={cell.id}
+                    >
+                      <div className="mission-admin-heading">
+                        <strong>マス {cell.id + 1}</strong>
+
+                        <span
+                          className={`mission-kind ${getMissionTypeClass(
+                            cell.type,
+                          )}`}
+                        >
+                          {getMissionTypeLabel(cell.type)}
+                        </span>
+
+                        <span
+                          className={`mission-state ${
+                            cell.revealed ? "revealed" : "hidden"
+                          }`}
+                        >
+                          {cell.revealed ? "発表済み" : "未発表"}
+                        </span>
+
+                        <span
+                          className={`mission-state ${
+                            cell.completed ? "completed" : "incomplete"
+                          }`}
+                        >
+                          {cell.completed ? "達成済み" : "未達成"}
+                        </span>
+                      </div>
+
+                      {isEditing ? (
+                        <div className="mission-edit-form">
+                          <textarea
+                            aria-label={`マス ${cell.id + 1} のミッション内容`}
+                            autoFocus
+                            onChange={(event) =>
+                              setDraftContent(event.target.value)
+                            }
+                            value={draftContent}
+                          />
+
+                          <div className="mission-edit-actions">
+                            <button
+                              className="mission-save-button"
+                              onClick={() => saveMissionContent(cell)}
+                            >
+                              保存
+                            </button>
+
+                            <button
+                              className="mission-cancel-button"
+                              onClick={cancelEditingMission}
+                            >
+                              キャンセル
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mission-read-form">
+                          <p>{cell.content}</p>
+
+                          <button
+                            className="mission-edit-button"
+                            onClick={() => startEditingMission(cell)}
+                          >
+                            内容を変更
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
 
         {showProgressMenu && (
           <div className="modal-backdrop" role="presentation">
