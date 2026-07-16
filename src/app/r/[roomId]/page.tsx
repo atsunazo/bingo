@@ -508,6 +508,10 @@ useEffect(() => {
           })}
         </section>
 
+         <p className="help-text">
+          ルームID：{roomId}　
+        </p>
+
         {room.status === "waiting" ? (
           <button className="main-button" onClick={startGame}>
             スタート
@@ -610,7 +614,7 @@ useEffect(() => {
               className="progress-modal"
               role="dialog"
             >
-              <br></br>
+          
               <h2>クリア状況</h2>
               <p>進行状況を選んでください。</p>
 
