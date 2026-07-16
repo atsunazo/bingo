@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "謎解き周遊ビンゴ",
-    short_name: "ツアービンゴ",
+    short_name: "周遊ビンゴ",
     description: "みんなで協力して楽しむ、謎解き周遊ビンゴ",
     start_url: "/",
     display: "standalone",
