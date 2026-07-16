@@ -829,3 +829,63 @@ h1 {
   border-color: #c9d2de;
   color: #4f6079;
 }
+
+.reroll-setting-box {
+  background: #fff5f5;
+  border: 1px solid #efc1c1;
+  border-radius: 11px;
+  color: #643d3d;
+  margin-top: 20px;
+  padding: 13px;
+  text-align: left;
+}
+
+.reroll-setting-box strong {
+  color: #9d2424;
+  font-size: 14px;
+}
+
+.reroll-setting-box p {
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 7px 0 11px;
+}
+
+.reroll-open-button,
+.reroll-confirm-button {
+  background: #b93535;
+  border: 1px solid #912525;
+  border-radius: 9px;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 9px 11px;
+  width: 100%;
+}
+
+.reroll-confirm-button:disabled {
+  background: #c9a4a4;
+  border-color: #b89090;
+  cursor: not-allowed;
+}
+
+.reroll-modal {
+  max-width: 440px;
+}
+
+.reroll-modal > p:not(.reroll-warning) {
+  color: #59494a !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+  text-align: left;
+}
+
+.reroll-warning {
+  color: #b32626 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.06em;
+  margin: 0 0 7px !important;
+}

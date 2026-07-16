@@ -10,10 +10,12 @@ import {
 } from "firebase/firestore";
 import { useParams } from "next/navigation";
 import {
+  createBingoCells,
   getCompletedBingoLines,
   getElapsedPlayingMilliseconds,
   getMaximumScore,
   getScore,
+  parseMissionCsv,
   type BingoCell,
   type BingoRoom,
   type GameStatus,
@@ -74,6 +76,9 @@ export default function AdminRoomPage() {
   const [showProgressMenu, setShowProgressMenu] = useState(false);
   const [showMissionManager, setShowMissionManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRerollConfirm, setShowRerollConfirm] = useState(false);
+  const [rerollConfirmText, setRerollConfirmText] = useState("");
+  const [rerolling, setRerolling] = useState(false);
   const [editingCellId, setEditingCellId] = useState<number | null>(null);
   const [draftContent, setDraftContent] = useState("");
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(180);
@@ -305,7 +310,66 @@ export default function AdminRoomPage() {
       setNotice("ゲーム設定を保存しました。");
     }
   }
+async function rerollAndResetGame() {
+  if (!room) {
+    return;
+  }
 
+  if (rerollConfirmText !== "リセット") {
+    setNotice("確認欄に「リセット」と入力してください。");
+    return;
+  }
+
+  setRerolling(true);
+
+  try {
+    const response = await fetch("/mission.csv");
+
+    if (!response.ok) {
+      throw new Error(
+        `mission.csv を読み込めませんでした（${response.status}）`,
+      );
+    }
+
+    const csv = await response.text();
+    const missions = parseMissionCsv(csv);
+
+    const nextCells = createBingoCells({
+      gridSize: room.gridSize,
+      missions,
+      normalCount: room.normalCount,
+      emergencyCount: room.emergencyCount,
+      centerMission: room.centerMission,
+    });
+
+    const updated = await updateRoom((latestRoom) => ({
+      ...latestRoom,
+      status: "waiting" as GameStatus,
+      startedAt: null,
+      pausedAt: null,
+      totalPausedMilliseconds: 0,
+      finishedAt: null,
+      cells: nextCells,
+    }));
+
+    if (updated) {
+      setShowRerollConfirm(false);
+      setRerollConfirmText("");
+      setNotice(
+        "新しいミッション配置でリセットしました。参加者画面も開始前の新しい盤面に切り替わります。",
+      );
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "新しい盤面の作成中に予期しないエラーが起きました。";
+
+    setNotice(message);
+  } finally {
+    setRerolling(false);
+  }
+}
   async function startGame() {
     const accepted = window.confirm("スタートしていいですか？");
 
@@ -757,6 +821,61 @@ export default function AdminRoomPage() {
           )}
         </section>
 
+        {showRerollConfirm && (
+          <div className="modal-backdrop" role="presentation">
+            <section
+              aria-labelledby="reroll-dialog-title"
+              aria-modal="true"
+              className="progress-modal reroll-modal"
+              role="dialog"
+            >
+              <p className="reroll-warning">注意：元に戻せません</p>
+
+              <h2 id="reroll-dialog-title">新しく抽選してリセット</h2>
+
+              <p>
+                現在の達成状況、発表済み緊急ミッション、得点、ビンゴ数、ゲーム時間はすべて消えます。
+              </p>
+
+              <p>
+                <strong>
+                  ミッション内容は最新のmission.csvから再抽選されます。
+                </strong>
+              </p>
+
+              <label className="settings-label">
+                実行するには「リセット」と入力
+                <input
+                  onChange={(event) => setRerollConfirmText(event.target.value)}
+                  placeholder="リセット"
+                  value={rerollConfirmText}
+                />
+              </label>
+
+              <div className="settings-actions">
+                <button
+                  className="reroll-confirm-button"
+                  disabled={rerolling || rerollConfirmText !== "リセット"}
+                  onClick={rerollAndResetGame}
+                >
+                  {rerolling ? "新しい盤面を作成中…" : "抽選してリセットする"}
+                </button>
+
+                <button
+                  className="settings-cancel-button"
+                  disabled={rerolling}
+                  onClick={() => {
+                    setShowRerollConfirm(false);
+                    setRerollConfirmText("");
+                  }}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
         {showSettings && (
           <div className="modal-backdrop" role="presentation">
             <section
@@ -818,6 +937,24 @@ export default function AdminRoomPage() {
               <p className="settings-help">
                 自動発表はゲーム開始から指定間隔ごとに行われます。一時停止中は参加者の操作を止めます。
               </p>
+
+              <div className="reroll-setting-box">
+                <strong>新しく抽選してリセット</strong>
+
+                <p>
+                  mission.csvからミッションを再抽選し、盤面・達成状況・発表状況・時間をすべて開始前へ戻します。
+                </p>
+
+                <button
+                  className="reroll-open-button"
+                  onClick={() => {
+                    setShowSettings(false);
+                    setShowRerollConfirm(true);
+                  }}
+                >
+                  新しく抽選してリセットする
+                </button>
+              </div>
 
               <div className="settings-actions">
                 <button className="settings-save-button" onClick={saveSettings}>
