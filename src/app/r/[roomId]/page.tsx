@@ -464,10 +464,6 @@ export default function RoomPage() {
           })}
         </section>
 
-        <p className="help-text">
-          ルームID：{roomId}　同じURLを共有すると、全員で同じ盤面を見られます。
-        </p>
-
         {room.status === "waiting" ? (
           <button className="main-button" onClick={startGame}>
             スタート
