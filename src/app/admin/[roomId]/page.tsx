@@ -982,6 +982,10 @@ async function rerollAndResetGame() {
                 </button>
               </div>
 
+            　 <p className="mission-manager-help">
+                設定を保存を押さないと保存されません！
+              </p>
+
               <div className="settings-actions">
                 <button className="settings-save-button" onClick={saveSettings}>
                   設定を保存
