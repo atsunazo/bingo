@@ -733,3 +733,99 @@ h1 {
     width: 100%;
   }
 }
+
+.admin-action-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.admin-action-grid .main-button {
+  margin: 0;
+}
+
+.pause-button,
+.resume-button,
+.settings-button {
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  min-height: 50px;
+  padding: 12px;
+  width: 100%;
+}
+
+.pause-button {
+  background: #fff3d9;
+  border: 1px solid #e5ae4e;
+  color: #885100;
+}
+
+.resume-button {
+  background: #e0f8e9;
+  border: 1px solid #55af77;
+  color: #16683b;
+}
+
+.settings-button {
+  background: #f2f5fa;
+  border: 1px solid #c7d1e0;
+  color: #405571;
+}
+
+.settings-modal {
+  max-width: 440px;
+}
+
+.settings-label {
+  color: var(--navy);
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 6px;
+  margin-top: 13px;
+  text-align: left;
+}
+
+.settings-label input {
+  background: #fbfdff;
+  border: 1px solid #c5d7f2;
+  border-radius: 9px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  min-height: 44px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.settings-help {
+  color: #586981 !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  margin: 15px 0 !important;
+  text-align: left;
+}
+
+.settings-actions {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.progress-modal .settings-actions button {
+  margin: 0;
+}
+
+.settings-save-button {
+  background: #1e8f55;
+  border-color: #167244;
+  color: white;
+}
+
+.settings-cancel-button {
+  background: #f4f6f9;
+  border-color: #c9d2de;
+  color: #4f6079;
+}

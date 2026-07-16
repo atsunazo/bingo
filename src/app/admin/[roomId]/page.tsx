@@ -72,8 +72,14 @@ export default function AdminRoomPage() {
   const [notice, setNotice] = useState("");
   const [showProgressMenu, setShowProgressMenu] = useState(false);
   const [showMissionManager, setShowMissionManager] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingCellId, setEditingCellId] = useState<number | null>(null);
   const [draftContent, setDraftContent] = useState("");
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState(180);
+  const [centerRevealAfterSeconds, setCenterRevealAfterSeconds] =
+    useState(30);
+  const [revealEveryMinutes, setRevealEveryMinutes] = useState(60);
+  const [revealPerStepClear, setRevealPerStepClear] = useState(1);
   const [now, setNow] = useState(Date.now());
 
   const roomReference = useMemo(
@@ -132,6 +138,84 @@ export default function AdminRoomPage() {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (
+      !room ||
+      room.status !== "playing" ||
+      !room.startedAt ||
+      room.emergencySettings.revealEveryMinutes < 1
+    ) {
+      return;
+    }
+
+    const elapsedMilliseconds = now - room.startedAt;
+    const intervalMilliseconds =
+      room.emergencySettings.revealEveryMinutes * 60 * 1000;
+
+    const shouldRevealCount = Math.floor(
+      elapsedMilliseconds / intervalMilliseconds,
+    );
+
+    if (shouldRevealCount < 1) {
+      return;
+    }
+
+    const revealedEmergencyCount = room.cells.filter(
+      (cell) => cell.type === "emergency" && cell.revealed,
+    ).length;
+
+    if (revealedEmergencyCount >= shouldRevealCount) {
+      return;
+    }
+
+    runTransaction(db, async (transaction) => {
+      const latestSnapshot = await transaction.get(roomReference);
+
+      if (!latestSnapshot.exists()) {
+        return;
+      }
+
+      const latestRoom = latestSnapshot.data();
+
+      if (latestRoom.status !== "playing" || !latestRoom.startedAt) {
+        return;
+      }
+
+      const latestElapsedMilliseconds = Date.now() - latestRoom.startedAt;
+      const latestIntervalMilliseconds =
+        latestRoom.emergencySettings.revealEveryMinutes * 60 * 1000;
+
+      const latestShouldRevealCount = Math.floor(
+        latestElapsedMilliseconds / latestIntervalMilliseconds,
+      );
+
+      let alreadyRevealedCount = latestRoom.cells.filter(
+        (cell) => cell.type === "emergency" && cell.revealed,
+      ).length;
+
+      const cells = latestRoom.cells.map((cell) => {
+        if (
+          cell.type === "emergency" &&
+          !cell.revealed &&
+          alreadyRevealedCount < latestShouldRevealCount
+        ) {
+          alreadyRevealedCount += 1;
+
+          return {
+            ...cell,
+            revealed: true,
+          };
+        }
+
+        return cell;
+      });
+
+      transaction.update(roomReference, { cells });
+    }).catch(() => {
+      setNotice("自動の緊急ミッション発表に失敗しました。");
+    });
+  }, [now, room, roomReference]);
+
   async function updateRoom(
     action: (latestRoom: RoomDocument) => RoomDocument,
   ) {
@@ -169,6 +253,55 @@ export default function AdminRoomPage() {
     }
   }
 
+  function openSettings() {
+    if (!room) {
+      return;
+    }
+
+    setTimeLimitMinutes(room.timeLimitMinutes);
+    setCenterRevealAfterSeconds(
+      room.emergencySettings.centerRevealAfterSeconds,
+    );
+    setRevealEveryMinutes(room.emergencySettings.revealEveryMinutes);
+    setRevealPerStepClear(room.emergencySettings.revealPerStepClear);
+    setShowSettings(true);
+  }
+
+  async function saveSettings() {
+    if (
+      timeLimitMinutes < 1 ||
+      centerRevealAfterSeconds < 0 ||
+      revealEveryMinutes < 1 ||
+      revealPerStepClear < 1
+    ) {
+      setNotice(
+        "設定値を確認してください。制限時間・発表間隔・発表数は1以上必要です。",
+      );
+      return;
+    }
+
+    const accepted = window.confirm("このゲーム設定を保存しますか？");
+
+    if (!accepted) {
+      return;
+    }
+
+    const updated = await updateRoom((latestRoom) => ({
+      ...latestRoom,
+      timeLimitMinutes,
+      emergencySettings: {
+        centerRevealAfterSeconds,
+        revealEveryMinutes,
+        revealPerStepClear,
+      },
+    }));
+
+    if (updated) {
+      setShowSettings(false);
+      setNotice("ゲーム設定を保存しました。");
+    }
+  }
+
   async function startGame() {
     const accepted = window.confirm("スタートしていいですか？");
 
@@ -190,6 +323,54 @@ export default function AdminRoomPage() {
 
     if (updated) {
       setNotice("ゲームを開始しました。中央ミッションは30秒後に発表されます。");
+    }
+  }
+
+  async function pauseGame() {
+    const accepted = window.confirm(
+      "ゲームを一時停止しますか？ 参加者はマスを操作できなくなります。",
+    );
+
+    if (!accepted) {
+      return;
+    }
+
+    const updated = await updateRoom((latestRoom) => {
+      if (latestRoom.status !== "playing") {
+        return latestRoom;
+      }
+
+      return {
+        ...latestRoom,
+        status: "paused" as GameStatus,
+      };
+    });
+
+    if (updated) {
+      setNotice("ゲームを一時停止しました。");
+    }
+  }
+
+  async function resumeGame() {
+    const accepted = window.confirm("ゲームを再開しますか？");
+
+    if (!accepted) {
+      return;
+    }
+
+    const updated = await updateRoom((latestRoom) => {
+      if (latestRoom.status !== "paused") {
+        return latestRoom;
+      }
+
+      return {
+        ...latestRoom,
+        status: "playing" as GameStatus,
+      };
+    });
+
+    if (updated) {
+      setNotice("ゲームを再開しました。");
     }
   }
 
@@ -416,22 +597,44 @@ export default function AdminRoomPage() {
           <p>緊急ミッション発表済み：{revealedEmergencyCount}件</p>
         </section>
 
-        {room.status === "waiting" ? (
-          <button className="main-button" onClick={startGame}>
-            スタート
+        <div className="admin-action-grid">
+          {room.status === "waiting" && (
+            <button className="main-button" onClick={startGame}>
+              スタート
+            </button>
+          )}
+
+          {room.status === "playing" && (
+            <>
+              <button
+                className="main-button"
+                onClick={() => setShowProgressMenu(true)}
+              >
+                クリア状況・進行操作
+              </button>
+
+              <button className="pause-button" onClick={pauseGame}>
+                一時停止
+              </button>
+            </>
+          )}
+
+          {room.status === "paused" && (
+            <button className="resume-button" onClick={resumeGame}>
+              ゲームを再開する
+            </button>
+          )}
+
+          {room.status === "finished" && (
+            <button className="main-button disabled" disabled>
+              ゲーム終了
+            </button>
+          )}
+
+          <button className="settings-button" onClick={openSettings}>
+            ゲーム設定を開く
           </button>
-        ) : room.status === "playing" ? (
-          <button
-            className="main-button"
-            onClick={() => setShowProgressMenu(true)}
-          >
-            クリア状況・進行操作
-          </button>
-        ) : (
-          <button className="main-button disabled" disabled>
-            {room.status === "finished" ? "ゲーム終了" : "一時停止中"}
-          </button>
-        )}
+        </div>
 
         <a
           className="participant-preview-link"
@@ -545,6 +748,84 @@ export default function AdminRoomPage() {
           )}
         </section>
 
+        {showSettings && (
+          <div className="modal-backdrop" role="presentation">
+            <section
+              aria-labelledby="settings-dialog-title"
+              aria-modal="true"
+              className="progress-modal settings-modal"
+              role="dialog"
+            >
+              <h2 id="settings-dialog-title">ゲーム設定</h2>
+
+              <label className="settings-label">
+                制限時間（分）
+                <input
+                  min="1"
+                  onChange={(event) =>
+                    setTimeLimitMinutes(Number(event.target.value))
+                  }
+                  type="number"
+                  value={timeLimitMinutes}
+                />
+              </label>
+
+              <label className="settings-label">
+                中央ミッション発表まで（秒）
+                <input
+                  min="0"
+                  onChange={(event) =>
+                    setCenterRevealAfterSeconds(Number(event.target.value))
+                  }
+                  type="number"
+                  value={centerRevealAfterSeconds}
+                />
+              </label>
+
+              <label className="settings-label">
+                自動で緊急ミッションを発表する間隔（分）
+                <input
+                  min="1"
+                  onChange={(event) =>
+                    setRevealEveryMinutes(Number(event.target.value))
+                  }
+                  type="number"
+                  value={revealEveryMinutes}
+                />
+              </label>
+
+              <label className="settings-label">
+                ステップクリアごとの緊急ミッション発表数
+                <input
+                  min="1"
+                  onChange={(event) =>
+                    setRevealPerStepClear(Number(event.target.value))
+                  }
+                  type="number"
+                  value={revealPerStepClear}
+                />
+              </label>
+
+              <p className="settings-help">
+                自動発表はゲーム開始から指定間隔ごとに行われます。一時停止中は参加者の操作を止めます。
+              </p>
+
+              <div className="settings-actions">
+                <button className="settings-save-button" onClick={saveSettings}>
+                  設定を保存
+                </button>
+
+                <button
+                  className="settings-cancel-button"
+                  onClick={() => setShowSettings(false)}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
         {showProgressMenu && (
           <div className="modal-backdrop" role="presentation">
             <section
@@ -555,8 +836,13 @@ export default function AdminRoomPage() {
               <h2>クリア状況・進行操作</h2>
               <p>謎解き周遊の進行に合わせて選んでください。</p>
 
-              <button onClick={() => revealEmergency(1)}>
-                現在のステップをクリアした
+              <button
+                onClick={() =>
+                  revealEmergency(room.emergencySettings.revealPerStepClear)
+                }
+              >
+                現在のステップをクリアした（
+                {room.emergencySettings.revealPerStepClear}件発表）
               </button>
 
               <button onClick={() => revealEmergency(99)}>
