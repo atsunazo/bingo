@@ -380,3 +380,79 @@ h1 {
   border-color: #ccd5e3;
   color: #4c5d78;
 }
+
+.create-card {
+  max-width: 560px;
+}
+
+.create-intro {
+  color: #53647f;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 20px 0;
+}
+
+.create-form {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.create-form label {
+  color: var(--navy);
+  display: grid;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 7px;
+}
+
+.create-form input,
+.create-form select {
+  background: #fbfdff;
+  border: 1px solid #c5d7f2;
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  min-height: 46px;
+  outline-color: var(--blue);
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.count-inputs {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.count-note {
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: -5px 0 0;
+  padding: 9px 10px;
+}
+
+.count-note.valid {
+  background: #e5f8eb;
+  color: #197043;
+}
+
+.count-note.error,
+.form-error {
+  background: #ffe7e7;
+  border-radius: 9px;
+  color: #a82727;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  padding: 10px;
+}
+
+.main-button:disabled {
+  background: #aab3c1;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
