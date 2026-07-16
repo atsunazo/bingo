@@ -407,7 +407,7 @@ export default function RoomPage() {
           <div>
             <span>残り時間</span>
             <strong className="time-value">
-              {room.status === "playing"
+              {room.status === "playing" || room.status === "paused"
                 ? formatRemainingTime(remainingMilliseconds)
                 : room.status === "finished"
                   ? "終了"
@@ -537,7 +537,7 @@ export default function RoomPage() {
                 }
               >
                 現在のステップをクリアした（
-                {room.emergencySettings.revealPerStepClear}件発表）
+                {room.emergencySettings.revealPerStepClear}ミッション追加）
               </button>
 
               <button onClick={() => revealEmergency(99)}>

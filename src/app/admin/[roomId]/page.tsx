@@ -584,7 +584,7 @@ export default function AdminRoomPage() {
           <div>
             <span>残り時間</span>
             <strong className="time-value">
-              {room.status === "playing"
+              {room.status === "playing" || room.status === "paused"
                 ? formatRemainingTime(remainingMilliseconds)
                 : room.status === "finished"
                   ? "終了"
