@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { signInAnonymously } from "firebase/auth";
 import {
   doc,
   onSnapshot,
@@ -16,7 +17,7 @@ import {
   type BingoRoom,
   type GameStatus,
 } from "@/lib/bingo";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 
 type RoomDocument = BingoRoom & {
   createdBy: string | null;
@@ -65,7 +66,19 @@ export default function RoomPage() {
     () => doc(db, "rooms", roomId) as DocumentReference<RoomDocument>,
     [roomId],
   );
+  useEffect(() => {
+    if (auth.currentUser) {
+      return;
+    }
 
+    signInAnonymously(auth).catch(() => {
+      setErrorMessage(
+        "参加の準備に失敗しました。ページを再読み込みしてください。",
+      );
+      setLoading(false);
+    });
+  }, []);
+  
   useEffect(() => {
     const unsubscribe = onSnapshot(
       roomReference,
