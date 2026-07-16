@@ -32,6 +32,8 @@ export type BingoRoom = {
   status: GameStatus;
   createdAt: number;
   startedAt: number | null;
+  pausedAt: number | null;
+  totalPausedMilliseconds: number;
   finishedAt: number | null;
   timeLimitMinutes: number;
   normalCount: number;
@@ -305,6 +307,8 @@ export function createNewRoom({
     status: "waiting",
     createdAt: Date.now(),
     startedAt: null,
+    pausedAt: null,
+    totalPausedMilliseconds: 0,
     finishedAt: null,
     timeLimitMinutes,
     normalCount,
@@ -319,4 +323,29 @@ export function createNewRoom({
       centerMission,
     }),
   };
+}
+
+export function getElapsedPlayingMilliseconds(
+  room: Pick<
+    BingoRoom,
+    "startedAt" | "status" | "pausedAt" | "totalPausedMilliseconds"
+  >,
+  now = Date.now(),
+): number {
+  if (!room.startedAt) {
+    return 0;
+  }
+
+  const currentPauseMilliseconds =
+    room.status === "paused" && room.pausedAt
+      ? now - room.pausedAt
+      : 0;
+
+  return Math.max(
+    0,
+    now -
+      room.startedAt -
+      room.totalPausedMilliseconds -
+      currentPauseMilliseconds,
+  );
 }

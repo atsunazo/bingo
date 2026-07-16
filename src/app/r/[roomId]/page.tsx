@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import {
   getCompletedBingoLines,
+  getElapsedPlayingMilliseconds,
   getMaximumScore,
   getScore,
   type BingoCell,
@@ -120,9 +121,9 @@ export default function RoomPage() {
     const centerDelay =
       room.emergencySettings.centerRevealAfterSeconds * 1000;
 
-    if (now < room.startedAt + centerDelay) {
-      return;
-    }
+    if (getElapsedPlayingMilliseconds(room, now) < centerDelay) {
+        return;
+      }
 
     const centerCell = room.cells.find((cell) => cell.type === "center");
 
@@ -161,9 +162,10 @@ export default function RoomPage() {
       return;
     }
 
-    const endAt = room.startedAt + room.timeLimitMinutes * 60 * 1000;
+   const elapsedMilliseconds = getElapsedPlayingMilliseconds(room, now);
+    const timeLimitMilliseconds = room.timeLimitMinutes * 60 * 1000;
 
-    if (now < endAt) {
+    if (elapsedMilliseconds < timeLimitMilliseconds) {
       return;
     }
 
@@ -202,8 +204,9 @@ export default function RoomPage() {
   );
 
   const remainingMilliseconds =
-    room?.status === "playing" && room.startedAt
-      ? room.startedAt + room.timeLimitMinutes * 60 * 1000 - now
+    room?.startedAt
+      ? room.timeLimitMinutes * 60 * 1000 -
+        getElapsedPlayingMilliseconds(room, now)
       : 0;
 
   async function updateRoom(action: (latestRoom: RoomDocument) => RoomDocument) {
@@ -528,8 +531,13 @@ export default function RoomPage() {
               <h2>クリア状況</h2>
               <p>進行状況を選んでください。</p>
 
-              <button onClick={() => revealEmergency(1)}>
-                現在のステップをクリアした
+              <button
+                onClick={() =>
+                  revealEmergency(room.emergencySettings.revealPerStepClear)
+                }
+              >
+                現在のステップをクリアした（
+                {room.emergencySettings.revealPerStepClear}件発表）
               </button>
 
               <button onClick={() => revealEmergency(99)}>

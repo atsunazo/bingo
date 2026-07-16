@@ -11,6 +11,7 @@ import {
 import { useParams } from "next/navigation";
 import {
   getCompletedBingoLines,
+  getElapsedPlayingMilliseconds,
   getMaximumScore,
   getScore,
   type BingoCell,
@@ -148,7 +149,7 @@ export default function AdminRoomPage() {
       return;
     }
 
-    const elapsedMilliseconds = now - room.startedAt;
+    const elapsedMilliseconds = getElapsedPlayingMilliseconds(room, now);
     const intervalMilliseconds =
       room.emergencySettings.revealEveryMinutes * 60 * 1000;
 
@@ -181,7 +182,10 @@ export default function AdminRoomPage() {
         return;
       }
 
-      const latestElapsedMilliseconds = Date.now() - latestRoom.startedAt;
+      const latestElapsedMilliseconds = getElapsedPlayingMilliseconds(
+        latestRoom,
+        Date.now(),
+      );
       const latestIntervalMilliseconds =
         latestRoom.emergencySettings.revealEveryMinutes * 60 * 1000;
 
@@ -328,7 +332,7 @@ export default function AdminRoomPage() {
 
   async function pauseGame() {
     const accepted = window.confirm(
-      "ゲームを一時停止しますか？ 参加者はマスを操作できなくなります。",
+      "ゲームを一時停止しますか？ 参加者はマスを操作できなくなり、残り時間も止まります。",
     );
 
     if (!accepted) {
@@ -343,11 +347,12 @@ export default function AdminRoomPage() {
       return {
         ...latestRoom,
         status: "paused" as GameStatus,
+        pausedAt: Date.now(),
       };
     });
 
     if (updated) {
-      setNotice("ゲームを一時停止しました。");
+      setNotice("ゲームを一時停止しました。残り時間と自動発表も停止しています。");
     }
   }
 
@@ -359,13 +364,17 @@ export default function AdminRoomPage() {
     }
 
     const updated = await updateRoom((latestRoom) => {
-      if (latestRoom.status !== "paused") {
+      if (latestRoom.status !== "paused" || !latestRoom.pausedAt) {
         return latestRoom;
       }
 
       return {
         ...latestRoom,
         status: "playing" as GameStatus,
+        pausedAt: null,
+        totalPausedMilliseconds:
+          latestRoom.totalPausedMilliseconds +
+          (Date.now() - latestRoom.pausedAt),
       };
     });
 
@@ -514,10 +523,10 @@ export default function AdminRoomPage() {
   const score = getScore(room.cells);
 
   const remainingMilliseconds =
-    room.status === "playing" && room.startedAt
-      ? room.startedAt + room.timeLimitMinutes * 60 * 1000 - now
-      : 0;
-
+  room.startedAt
+    ? room.timeLimitMinutes * 60 * 1000 -
+      getElapsedPlayingMilliseconds(room, now)
+    : 0;
   const revealedEmergencyCount = room.cells.filter(
     (cell) => cell.type === "emergency" && cell.revealed,
   ).length;
