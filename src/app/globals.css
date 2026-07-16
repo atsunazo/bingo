@@ -456,3 +456,90 @@ h1 {
   cursor: not-allowed;
   transform: none;
 }
+
+.admin-card {
+  max-width: 620px;
+}
+
+.admin-share-box {
+  background: #e8f1ff;
+  border: 1px solid #bed4f8;
+  border-radius: 16px;
+  margin: 20px 0 16px;
+  padding: 15px;
+}
+
+.admin-section-label {
+  color: #36527e;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 0 7px;
+}
+
+.participant-url {
+  background: white;
+  border: 1px solid #c7d8f1;
+  border-radius: 9px;
+  color: #27446f;
+  font-size: 13px;
+  line-break: anywhere;
+  margin: 0;
+  padding: 10px;
+}
+
+.copy-button {
+  background: #2676df;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 10px;
+  padding: 12px;
+  width: 100%;
+}
+
+.admin-share-help {
+  color: #526987;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+
+.admin-summary {
+  background: #fffaf0;
+  border: 1px solid #f1ddb1;
+  border-radius: 13px;
+  color: #4f4227;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 14px 0;
+  padding: 12px 14px;
+}
+
+.admin-summary p {
+  margin: 3px 0;
+}
+
+.participant-preview-link {
+  color: #3869ad;
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 18px;
+  text-align: center;
+  text-decoration: underline;
+}
+
+.participant-status-message {
+  background: #edf3ff;
+  border-radius: 12px;
+  color: #405a82;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 14px 0 0;
+  padding: 11px;
+  text-align: center;
+}

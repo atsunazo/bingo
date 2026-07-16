@@ -69,7 +69,7 @@ export default function Home() {
         createdBy: auth.currentUser?.uid ?? null,
       });
 
-      router.push(`/r/${roomReference.id}`);
+      router.push(`/admin/${roomReference.id}`);
     } catch (error) {
       const message =
         error instanceof Error
