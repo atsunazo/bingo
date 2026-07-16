@@ -1015,3 +1015,27 @@ h1 {
     animation: none;
   }
 }
+
+.admin-url-divider {
+  border-top: 1px dashed #a9c3e8;
+  margin: 18px 0;
+}
+
+.participant-url.admin-url {
+  background: #fff8e8;
+  border-color: #e9ce91;
+  color: #72541a;
+}
+
+.admin-copy-button {
+  background: #9b6b13;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 10px;
+  padding: 12px;
+  width: 100%;
+}

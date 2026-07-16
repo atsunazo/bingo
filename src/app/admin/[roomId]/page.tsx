@@ -97,6 +97,10 @@ export default function AdminRoomPage() {
     typeof window === "undefined"
       ? ""
       : `${window.location.origin}/r/${roomId}`;
+  const adminUrl =
+    typeof window === "undefined"
+      ? ""
+      : `${window.location.origin}/admin/${roomId}`;
 
   useEffect(() => {
     if (auth.currentUser) {
@@ -251,13 +255,15 @@ export default function AdminRoomPage() {
     }
   }
 
-  async function copyParticipantUrl() {
+  async function copyUrl(url: string, label: string) {
     try {
-      await navigator.clipboard.writeText(participantUrl);
-      setNotice("参加者用URLをコピーしました。LINEなどへ貼り付けて共有してください。");
+      await navigator.clipboard.writeText(url);
+      setNotice(
+        `${label}をコピーしました。メモやLINEの自分宛てトークへ保存してください。`,
+      );
     } catch {
       setNotice(
-        "コピーに失敗しました。表示されているURLを選択してコピーしてください。",
+        `コピーに失敗しました。表示されている${label}を選択してコピーしてください。`,
       );
     }
   }
@@ -614,19 +620,39 @@ async function rerollAndResetGame() {
           </span>
         </header>
 
-        <section className="admin-share-box">
-          <p className="admin-section-label">参加者へ送るURL</p>
+       <section className="admin-share-box">
+  <p className="admin-section-label">参加者へ送るURL</p>
 
-          <p className="participant-url">{participantUrl}</p>
+  <p className="participant-url">{participantUrl}</p>
 
-          <button className="copy-button" onClick={copyParticipantUrl}>
-            参加URLをコピー
-          </button>
+  <button
+    className="copy-button"
+    onClick={() => copyUrl(participantUrl, "参加者用URL")}
+  >
+    参加URLをコピー
+  </button>
 
-          <p className="admin-share-help">
-            このURLだけをチームへ共有してください。管理画面のURLは共有不要です。
-          </p>
-        </section>
+  <p className="admin-share-help">
+    このURLだけをチームへ共有してください。
+  </p>
+
+  <div className="admin-url-divider" />
+
+  <p className="admin-section-label">運営者用URL（自分だけに保存）</p>
+
+  <p className="participant-url admin-url">{adminUrl}</p>
+
+  <button
+    className="admin-copy-button"
+    onClick={() => copyUrl(adminUrl, "管理用URL")}
+  >
+    管理URLをコピー
+  </button>
+
+  <p className="admin-share-help">
+    iPhoneで参加画面へ移動する前に、このURLをメモ・ブックマーク・LINEの自分宛てトークなどへ保存してください。
+  </p>
+</section>
 
         <section className="score-board" aria-label="現在の成績">
           <div>
