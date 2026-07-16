@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { signInAnonymously } from "firebase/auth";
 import {
@@ -62,6 +62,8 @@ export default function RoomPage() {
   const [showProgressMenu, setShowProgressMenu] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [notice, setNotice] = useState("");
+  const [announcedCells, setAnnouncedCells] = useState<BingoCell[]>([]);
+  const previousRevealedCellIds = useRef<Set<number> | null>(null);
 
   const roomReference = useMemo(
     () => doc(db, "rooms", roomId) as DocumentReference<RoomDocument>,
@@ -190,6 +192,48 @@ export default function RoomPage() {
       setNotice("制限時間終了の処理に失敗しました。");
     });
   }, [now, room, roomReference]);
+
+useEffect(() => {
+  if (!room) {
+    return;
+  }
+
+  const currentlyRevealedIds = new Set(
+    room.cells
+      .filter(
+        (cell) =>
+          cell.revealed &&
+          (cell.type === "emergency" || cell.type === "center"),
+      )
+      .map((cell) => cell.id),
+  );
+
+  const previousIds = previousRevealedCellIds.current;
+
+  if (!previousIds) {
+    previousRevealedCellIds.current = currentlyRevealedIds;
+    return;
+  }
+
+  const newlyRevealedCells = room.cells.filter(
+    (cell) =>
+      currentlyRevealedIds.has(cell.id) &&
+      !previousIds.has(cell.id) &&
+      (cell.type === "emergency" || cell.type === "center"),
+  );
+
+  previousRevealedCellIds.current = currentlyRevealedIds;
+
+  if (newlyRevealedCells.length === 0) {
+    return;
+  }
+
+  setAnnouncedCells(newlyRevealedCells);
+
+  if ("vibrate" in navigator) {
+    navigator.vibrate([160, 90, 160, 90, 300]);
+  }
+}, [room]);
 
   const bingoLines = useMemo(
     () => (room ? getCompletedBingoLines(room.cells) : []),
@@ -480,6 +524,48 @@ export default function RoomPage() {
             {room.status === "finished" ? "ゲーム終了" : "一時停止中"}
           </button>
         )}
+
+{announcedCells.length > 0 && (
+  <div className="emergency-backdrop" role="presentation">
+    <section
+      aria-labelledby="emergency-dialog-title"
+      aria-modal="true"
+      className="emergency-announcement"
+      role="dialog"
+    >
+      <p className="emergency-kicker">NEW MISSION</p>
+
+      <h2 id="emergency-dialog-title">
+        {announcedCells.some((cell) => cell.type === "center")
+          ? "中央ミッション発表！"
+          : "緊急ミッション発表！"}
+      </h2>
+
+      <p className="emergency-lead">
+        新しいミッションが{announcedCells.length}件発表されました
+      </p>
+
+      <div className="emergency-mission-list">
+        {announcedCells.map((cell) => (
+          <article className="emergency-mission-card" key={cell.id}>
+            <span>
+              {cell.type === "center" ? "中央ミッション" : "緊急ミッション"}
+            </span>
+
+            <strong>{cell.content}</strong>
+          </article>
+        ))}
+      </div>
+
+      <button
+        className="emergency-close-button"
+        onClick={() => setAnnouncedCells([])}
+      >
+        ミッションを確認した
+      </button>
+    </section>
+  </div>
+)}
 
         {selectedCell && (
           <div className="modal-backdrop" role="presentation">
