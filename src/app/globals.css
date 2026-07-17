@@ -1039,3 +1039,16 @@ h1 {
   padding: 12px;
   width: 100%;
 }
+
+.mission-link {
+  color: #075fba;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.mission-link:hover {
+  color: #d14318;
+}

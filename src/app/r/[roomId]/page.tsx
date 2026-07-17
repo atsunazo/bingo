@@ -50,6 +50,28 @@ function formatRemainingTime(milliseconds: number) {
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
+function renderMissionContent(content: string) {
+  const urlPattern = /(https?:\/\/[^\s）)\]}>]+)/g;
+  const parts = content.split(urlPattern);
+
+  return parts.map((part, index) => {
+    if (!urlPattern.test(part)) {
+      return part;
+    }
+
+    return (
+      <a
+        className="mission-link"
+        href={part}
+        key={`${part}-${index}`}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        {part.replace(/^https?:\/\//, "")} を開く
+      </a>
+    );
+  });
+}
 
 export default function RoomPage() {
   const params = useParams<{ roomId: string }>();
@@ -499,7 +521,7 @@ useEffect(() => {
                           ? "中央"
                           : "緊急"}
                     </span>
-                    <span className="cell-content">{cell.content}</span>
+                    <span className="cell-content">{renderMissionContent(cell.content)}</span>
                     {cell.completed && <span className="check">✓</span>}
                   </>
                 )}
@@ -556,7 +578,7 @@ useEffect(() => {
               {cell.type === "center" ? "中央ミッション" : "緊急ミッション"}
             </span>
 
-            <strong>{cell.content}</strong>
+            <strong>{renderMissionContent(cell.content)}</strong>
           </article>
         ))}
       </div>
