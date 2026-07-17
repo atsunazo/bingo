@@ -521,7 +521,7 @@ useEffect(() => {
                           ? "中央"
                           : "緊急"}
                     </span>
-                    <span className="cell-content">{renderMissionContent(cell.content)}</span>
+                    <span className="cell-content">{cell.content}</span>
                     {cell.completed && <span className="check">✓</span>}
                   </>
                 )}
@@ -605,8 +605,9 @@ useEffect(() => {
 
               <h2 id="mission-dialog-title">ミッション確認</h2>
 
-              <p className="mission-content-large">{selectedCell.content}</p>
-
+              <p className="mission-content-large">
+                {renderMissionContent(selectedCell.content)}
+              </p>
               <p className="mission-confirm-text">
                 {selectedCell.completed
                   ? "このミッションの達成を取り消しますか？"

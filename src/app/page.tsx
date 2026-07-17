@@ -28,10 +28,34 @@ export default function Home() {
   const [creating, setCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  const totalCells = gridSize * gridSize;
+  const isCountValid = normalCount + emergencyCount === totalCells;
+  const isTimeLimitValid = timeLimitMinutes > 0;
+
   function changeGridSize(nextGridSize: GridSize) {
     setGridSize(nextGridSize);
     setNormalCount(DEFAULT_COUNTS[nextGridSize].normal);
     setEmergencyCount(DEFAULT_COUNTS[nextGridSize].emergency);
+  }
+
+  function changeNormalCount(nextNormalCount: number) {
+    const safeNormalCount = Math.min(
+      Math.max(0, nextNormalCount),
+      totalCells - 1,
+    );
+
+    setNormalCount(safeNormalCount);
+    setEmergencyCount(totalCells - safeNormalCount);
+  }
+
+  function changeEmergencyCount(nextEmergencyCount: number) {
+    const safeEmergencyCount = Math.min(
+      Math.max(1, nextEmergencyCount),
+      totalCells,
+    );
+
+    setEmergencyCount(safeEmergencyCount);
+    setNormalCount(totalCells - safeEmergencyCount);
   }
 
   async function createRoom() {
@@ -81,10 +105,6 @@ export default function Home() {
     }
   }
 
-  const totalCells = gridSize * gridSize;
-  const isCountValid = normalCount + emergencyCount === totalCells;
-  const isTimeLimitValid = timeLimitMinutes > 0;
-
   return (
     <main className="app-shell">
       <section className="game-card create-card">
@@ -127,34 +147,78 @@ export default function Home() {
             </select>
           </label>
 
-          <div className="count-inputs">
-            <label>
-              通常ミッション数
-              <input
-                min="0"
-                onChange={(event) => setNormalCount(Number(event.target.value))}
-                type="number"
-                value={normalCount}
-              />
-            </label>
+          <section className="mission-count-settings">
+            <p className="mission-count-help">
+              通常と緊急の合計が、盤面の{totalCells}マスになるよう自動で調整されます。
+            </p>
 
-            <label>
-              緊急ミッション数
-              <input
-                min="1"
-                onChange={(event) =>
-                  setEmergencyCount(Number(event.target.value))
-                }
-                type="number"
-                value={emergencyCount}
-              />
-            </label>
-          </div>
+            <div className="mission-count-row">
+              <div>
+                <span className="mission-count-label">通常ミッション</span>
+                <strong>{normalCount}件</strong>
+              </div>
 
-          <p className={isCountValid ? "count-note valid" : "count-note error"}>
-            合計：{normalCount + emergencyCount} / {totalCells} マス
-            {!isCountValid && "（通常と緊急の合計をマス数に合わせてください）"}
-          </p>
+              <div className="count-stepper">
+                <button
+                  aria-label="通常ミッションを1件減らす"
+                  disabled={normalCount <= 0}
+                  onClick={() => changeNormalCount(normalCount - 1)}
+                  type="button"
+                >
+                  −
+                </button>
+
+                <output aria-label={`通常ミッション ${normalCount}件`}>
+                  {normalCount}
+                </output>
+
+                <button
+                  aria-label="通常ミッションを1件増やす"
+                  disabled={normalCount >= totalCells - 1}
+                  onClick={() => changeNormalCount(normalCount + 1)}
+                  type="button"
+                >
+                  ＋
+                </button>
+              </div>
+            </div>
+
+            <div className="mission-count-row">
+              <div>
+                <span className="mission-count-label">緊急ミッション</span>
+                <strong>{emergencyCount}件</strong>
+              </div>
+
+              <div className="count-stepper">
+                <button
+                  aria-label="緊急ミッションを1件減らす"
+                  disabled={emergencyCount <= 1}
+                  onClick={() => changeEmergencyCount(emergencyCount - 1)}
+                  type="button"
+                >
+                  −
+                </button>
+
+                <output aria-label={`緊急ミッション ${emergencyCount}件`}>
+                  {emergencyCount}
+                </output>
+
+                <button
+                  aria-label="緊急ミッションを1件増やす"
+                  disabled={emergencyCount >= totalCells}
+                  onClick={() => changeEmergencyCount(emergencyCount + 1)}
+                  type="button"
+                >
+                  ＋
+                </button>
+              </div>
+            </div>
+
+            <p className="mission-count-total">
+              通常 {normalCount}件 ＋ 緊急 {emergencyCount}件 ＝{" "}
+              {totalCells}マス
+            </p>
+          </section>
 
           <label>
             中央ミッション（開始30秒後に発表）

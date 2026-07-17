@@ -1052,3 +1052,87 @@ h1 {
 .mission-link:hover {
   color: #d14318;
 }
+
+.mission-count-settings {
+  background: #f5f8ff;
+  border: 1px solid #cbdaf0;
+  border-radius: 14px;
+  margin-top: 16px;
+  padding: 14px;
+}
+
+.mission-count-help {
+  color: #586a86;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.mission-count-row {
+  align-items: center;
+  background: white;
+  border: 1px solid #d5e0f0;
+  border-radius: 11px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  padding: 10px 11px;
+}
+
+.mission-count-label {
+  color: var(--navy);
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+
+.mission-count-row strong {
+  color: #203b63;
+  font-size: 18px;
+}
+
+.count-stepper {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.count-stepper button {
+  align-items: center;
+  background: #eaf2ff;
+  border: 1px solid #b7cbea;
+  border-radius: 9px;
+  color: #24578f;
+  cursor: pointer;
+  display: flex;
+  font-size: 21px;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  line-height: 1;
+  width: 38px;
+}
+
+.count-stepper button:disabled {
+  background: #f1f3f6;
+  border-color: #d9dfe7;
+  color: #a0a9b5;
+  cursor: not-allowed;
+}
+
+.count-stepper output {
+  color: var(--navy);
+  font-size: 20px;
+  font-weight: 900;
+  min-width: 28px;
+  text-align: center;
+}
+
+.mission-count-total {
+  color: #47617f;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 13px 0 0;
+  text-align: center;
+}
